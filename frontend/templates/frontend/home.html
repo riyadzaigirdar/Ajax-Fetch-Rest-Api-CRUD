@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TO DO</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <link href="https://fonts.googleapis.com/css?family=Montserrat&display=swap" rel="stylesheet">
+
+    <style type="text/css">
+        body{
+          background: rgb(54,217,182);
+          background: linear-gradient(90deg, rgba(54,217,182,1) 0%, rgba(32,152,126,1) 43%, rgba(0,212,255,1) 100%);
+        }
+
+
+        h1, h2, h3, h4, h5, p, span, strike{
+          font-family: 'Montserrat', sans-serif;
+
+        }
+
+
+        #task-container{
+          max-width:600px;
+          margin:0 auto;
+          box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+          background-color: #fff;
+          
+          margin-top:100px;
+          margin-bottom:100px;
+
+          justify-content: space-around;
+          align-items: flex-start;
+
+        }
+
+        #form-wrapper{
+          position: -webkit-sticky;
+          position: sticky;
+          top: 0rem;
+          border-bottom: 1px solid  #e9e9e9;
+          background-color: #fff;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+          padding:40px;
+        }
+
+        #submit{
+          background-color: #36d9b6;
+          border-radius: 0;
+          border:0;
+          color: #fff;
+        }
+
+        .flex-wrapper{
+            display: flex;
+        }
+
+        .task-wrapper{
+            margin:5px;
+            padding: 5px;
+            padding:20px;
+            cursor: pointer;
+            border-bottom: 1px solid  #e9e9e9;
+            color: #686868;
+            }
+
+    </style>
+
+</head>
+<body>
+
+    <div class="container">
+        <div id="task-container">
+            <div id="form-wrapper">
+                <form id="form">
+                    <div class="flex-wrapper">
+                        <div style="flex:6">
+                            <input id="title" class="form-control" type="text"
+                            name="title" placeholder="Add your task">
+                        </div>
+                        <div style="flex:1">
+                            <input id="submit" class="btn" type="submit">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div id="list-wrapper">
+                
+            </div>
+        </div>
+    </div>
+    
+    <script type="text/javascript">
+
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        var csrftoken = getCookie('csrftoken');
+        
+        var activeItem = null
+        var list_snapshot = 0
+
+        listBuild()
+        function listBuild() {
+           var list = document.getElementById('list-wrapper')
+           var url = 'http://127.0.0.1:8000/api/list'
+           //list.innerHTML = ''
+            fetch(url,
+                { // as usual throw a dictionary for post method
+            method: 'GET', // bairer dictionary key gulo variable type ar vitorer 
+            headers: { // dictionary key gulo string type
+              'Content-type': 'application/json',
+              'Authorization': 'token 05429a4fbb168215e263a6d9261078211683fe2c'
+            } // end header dictionary
+          })
+           .then((res)=> res.json())
+           .then(function(data){
+                for( var i in data){
+
+                    try{
+                        document.getElementById(`data-row-${i}`).remove()
+                    }catch(error){
+
+                    }
+                       
+                    title = `<span class='title' >${data[i].title}</span>`  
+                    if (data[i].is_completer == true){
+                        title = `<strike class='title' >${data[i].title}</strike>`  
+                    }
+
+                    dataRows = 
+                    `
+                    <div id='data-row-${i}' class='task-wrapper flex-wrapper'>
+                       <div style='flex:7'>
+                           ${title}
+                       </div>
+                       <div style='flex:1'>
+                           <button type="button" class="btn btn-sm btn-outline-info edit">Edit</button>
+                       </div>
+                       <div style='flex:1'>
+                           <button type="button" class="btn btn-sm btn-outline-dark delete">-</button>
+                       </div>
+                    </div>
+                    ` 
+                    list.innerHTML += dataRows
+                } // End For loop 
+                
+                if(data.length < list_snapshot.length){
+                    for(var i = data.length; i < list_snapshot.length; i++){
+                        document.getElementById(`data-row-${i}`).remove()
+                    }
+                }
+
+                list_snapshot = data
+
+
+                for( var i in data){
+                    var editItemButton = document.getElementsByClassName('edit')[i]
+                    var deleteButton = document.getElementsByClassName('delete')[i]
+                    var unstrikeButton = document.getElementsByClassName('title')[i]
+
+
+                    editItemButton.addEventListener('click', (function(item){
+                        return function(){
+                              editItem(item)
+                        }
+                    })(data[i]))
+
+                    deleteButton.addEventListener('click', (function(item){
+                        return function(){
+                              deleteItem(item)
+                        }
+                    })(data[i]))
+
+                    unstrikeButton.addEventListener('click', (function(item){
+                        return function(){
+                              unstrikeItem(item)
+                        }
+                    })(data[i]))
+                }
+
+           }) // End then(function(data))
+
+        } // End listBuild Function
+        
+        var addItem = document.getElementById('form')
+        addItem.addEventListener('submit', function(e){
+            e.preventDefault() // if you dont then browser will reload
+        var title = document.getElementById('title').value
+        console.log(title)
+        var url = 'http://127.0.0.1:8000/api/create/'
+        if (activeItem != null){
+            console.log(activeItem.id)
+            url = `http://127.0.0.1:8000/api/update/${activeItem.id}/`
+            activeItem = null
+        }
+        fetch(url,{ // as usual throw a dictionary for post method
+            method: 'POST', // bairer dictionary key gulo variable type ar vitorer 
+            headers: { // dictionary key gulo string type
+              'Content-type': 'application/json',
+              'Authorization': 'token 05429a4fbb168215e263a6d9261078211683fe2c',
+              'X-CSRFToken': csrftoken
+            }, // end header dictionary
+            body: JSON.stringify({'title':title})
+
+        })// end fetch method dictionary 
+        .then(function resetlist(){
+            listBuild()
+            document.getElementById('form').reset()
+        })
+        })
+        
+        function editItem(item){
+            console.log(item.id)
+            activeItem = item
+            document.getElementById("title").value = activeItem.title
+        }
+
+        function deleteItem(item){
+            var url = `http://127.0.0.1:8000/api/delete/${item.id}/`
+            fetch(url,
+            { 
+            method: 'DELETE',
+            headers: { 
+              'Content-type': 'application/json',
+              'Authorization': 'token 05429a4fbb168215e263a6d9261078211683fe2c',
+              'X-CSRFToken': csrftoken
+            }, // end header dictionary
+            body: JSON.stringify({'title':item.title})
+
+        })
+        .then(listBuild())
+        }
+
+        function unstrikeItem(item){
+            var url = `http://127.0.0.1:8000/api/update/${item.id}/`
+            item.is_completer = !item.is_completer
+            fetch(url,
+                { 
+            method: 'POST',
+            headers: { 
+              'Content-type': 'application/json',
+              'Authorization': 'token 05429a4fbb168215e263a6d9261078211683fe2c',
+              'X-CSRFToken': csrftoken
+            }, // end header dictionary
+            body: JSON.stringify({'title': item.title ,'is_completer':item.is_completer})
+
+               }).then(listBuild())
+        }
+    </script>
+    
+
+</body>
+</html>
